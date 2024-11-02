@@ -1,0 +1,6 @@
+{
+    "builds": [
+      { "src": "spotifyapp/**/*", "use": "@vercel/static-build", "config": { "distDir": "build" } }
+    ]
+  }
+  
