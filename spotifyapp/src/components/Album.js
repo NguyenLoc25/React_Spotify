@@ -1,13 +1,12 @@
-// src/components/Album.js
 import React, { useEffect, useState } from 'react';
 import { fetchAlbum } from '../api/spotifyApi';
 import './Album.css'; // Import file CSS cho Album
 
-const Album = ({ albumID }) => {
+const Album = ({ albumID, currentTrack, setCurrentTrack }) => {
   const [album, setAlbum] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentTrack, setCurrentTrack] = useState(null); // Để theo dõi bài hát hiện tại
+  const [playingTrack, setPlayingTrack] = useState(null); // Để theo dõi track đang phát trong album này
 
   useEffect(() => {
     const getAlbumData = async () => {
@@ -24,23 +23,34 @@ const Album = ({ albumID }) => {
     getAlbumData();
   }, [albumID]);
 
-  const playTrack = (track) => {
-  if (currentTrack) {
-    // Kiểm tra xem track hiện tại có phải là track được phát hay không
-    if (currentTrack.src === track.preview_url) {
-      currentTrack.play(); // Nếu đúng, chỉ cần phát lại
-      return;
+  useEffect(() => {
+    if (currentTrack !== playingTrack && playingTrack) {
+      // Nếu có bản nhạc khác đang phát, dừng track hiện tại
+      playingTrack.pause();
+      setPlayingTrack(null);
     }
-    currentTrack.pause(); // Dừng bài hát hiện tại nếu không phải
-  }
-  const audio = new Audio(track.preview_url); // Tạo đối tượng Audio với URL bản nhạc
-  audio.play() // Phát nhạc
-    .catch((error) => {
-      console.error('Error playing audio:', error);
-    }); // Xử lý lỗi khi phát
-  setCurrentTrack(audio); // Lưu bài hát hiện tại vào state
-};
+  }, [currentTrack, playingTrack]);
 
+  const playTrack = (track) => {
+    if (currentTrack) {
+      currentTrack.pause(); // Dừng track đang phát ở album khác nếu có
+    }
+
+    if (playingTrack && playingTrack.src === track.preview_url) {
+      // Nếu track hiện tại đang phát, dừng nó
+      playingTrack.pause();
+      setPlayingTrack(null);
+      setCurrentTrack(null); // Reset track toàn cục
+    } else {
+      // Nếu track mới được chọn, phát nó
+      const newAudio = new Audio(track.preview_url);
+      newAudio.play().catch((error) => {
+        console.error('Error playing audio:', error);
+      });
+      setPlayingTrack(newAudio); // Lưu đối tượng audio hiện tại
+      setCurrentTrack(newAudio); // Cập nhật track toàn cục
+    }
+  };
 
   if (loading) {
     return <div>Loading...</div>;
@@ -66,7 +76,9 @@ const Album = ({ albumID }) => {
         {album.tracks.items.map(track => (
           <li key={track.id} className="track-item">
             {track.name}
-            <button onClick={() => playTrack(track)}>Preview</button>
+            <button onClick={() => playTrack(track)}>
+              {playingTrack && playingTrack.src === track.preview_url ? 'Pause' : 'Preview'}
+            </button>
           </li>
         ))}
       </ul>
